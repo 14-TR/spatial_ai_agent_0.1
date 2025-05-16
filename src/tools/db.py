@@ -5,6 +5,22 @@ import re  # For regex-based allowlist
 import psycopg
 from psycopg.rows import dict_row
 from typing import List, Dict, Any, Optional
+import datetime
+import decimal
+
+# Helper function to make data JSON serializable
+def make_serializable(data: Any) -> Any:
+    if isinstance(data, list):
+        return [make_serializable(item) for item in data]
+    elif isinstance(data, dict):
+        return {key: make_serializable(value) for key, value in data.items()}
+    elif isinstance(data, datetime.datetime):
+        return data.isoformat()
+    elif isinstance(data, datetime.date):
+        return data.isoformat()
+    elif isinstance(data, decimal.Decimal):
+        return str(data)  # Convert Decimal to string to preserve precision
+    return data
 
 # TODO: Securely manage connection parameters (e.g., via environment variables)
 DB_NAME = os.getenv("POSTGRES_DB", "spatial_ai_db")
@@ -147,6 +163,10 @@ def log_nlq_interaction(
     Returns:
         The log_id of the newly inserted record, or None if an error occurred.
     """
+    # Serialize data before passing to Jsonb
+    serializable_sql_execution_raw_result = make_serializable(sql_execution_raw_result)
+    serializable_expected_result = make_serializable(expected_result)
+
     insert_query = """
         INSERT INTO nlq_agent_log (
             natural_language_query, session_id, generated_sql_query, 
@@ -168,8 +188,8 @@ def log_nlq_interaction(
         "session_id": session_id,
         "generated_sql_query": generated_sql_query,
         "sql_execution_raw_result": (
-            psycopg.types.json.Jsonb(sql_execution_raw_result)
-            if sql_execution_raw_result is not None
+            psycopg.types.json.Jsonb(serializable_sql_execution_raw_result)
+            if serializable_sql_execution_raw_result is not None
             else None
         ),
         "processed_analysis_result": processed_analysis_result,
@@ -185,8 +205,8 @@ def log_nlq_interaction(
         "is_correct": is_correct,
         "expected_sql_query": expected_sql_query,
         "expected_result": (
-            psycopg.types.json.Jsonb(expected_result)
-            if expected_result is not None
+            psycopg.types.json.Jsonb(serializable_expected_result)
+            if serializable_expected_result is not None
             else None
         ),
     }
