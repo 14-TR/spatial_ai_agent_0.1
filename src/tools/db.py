@@ -152,6 +152,8 @@ def log_nlq_interaction(
     expected_result: Optional[
         Dict[str, Any]
     ] = None,  # Assuming JSONB will be passed as dict
+    evaluator_overall_success_score: Optional[int] = None,
+    evaluator_critique_text: Optional[str] = None
 ) -> Optional[int]:
     """
     Logs an interaction with the NLQ agent to the nlq_agent_log table.
@@ -173,13 +175,15 @@ def log_nlq_interaction(
             sql_execution_raw_result, processed_analysis_result, agent_version, 
             llm_model_used, latency_ms, prompt_tokens, completion_tokens, 
             total_tokens, cost_usd_cents, human_feedback_score, 
-            human_feedback_notes, is_correct, expected_sql_query, expected_result
+            human_feedback_notes, is_correct, expected_sql_query, expected_result,
+            evaluator_overall_success_score, evaluator_critique_text
         ) VALUES (
             %(natural_language_query)s, %(session_id)s, %(generated_sql_query)s,
             %(sql_execution_raw_result)s, %(processed_analysis_result)s, %(agent_version)s,
             %(llm_model_used)s, %(latency_ms)s, %(prompt_tokens)s, %(completion_tokens)s,
             %(total_tokens)s, %(cost_usd_cents)s, %(human_feedback_score)s,
-            %(human_feedback_notes)s, %(is_correct)s, %(expected_sql_query)s, %(expected_result)s
+            %(human_feedback_notes)s, %(is_correct)s, %(expected_sql_query)s, %(expected_result)s,
+            %(evaluator_overall_success_score)s, %(evaluator_critique_text)s
         ) RETURNING log_id;
     """
 
@@ -209,6 +213,8 @@ def log_nlq_interaction(
             if serializable_expected_result is not None
             else None
         ),
+        "evaluator_overall_success_score": evaluator_overall_success_score,
+        "evaluator_critique_text": evaluator_critique_text,
     }
 
     try:
@@ -273,6 +279,8 @@ if __name__ == "__main__":
         completion_tokens=50,
         total_tokens=250,
         cost_usd_cents=0.025,
+        evaluator_overall_success_score=100,
+        evaluator_critique_text="Excellent analysis!"
     )
     if log_id is not None:
         print(f"Successfully logged interaction with log_id: {log_id}")
