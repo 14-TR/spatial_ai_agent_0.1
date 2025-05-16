@@ -14,6 +14,7 @@ load_dotenv()
 
 # Import from new utils module
 from ..tools.schema_utils import load_schemas
+from .evaluator_agent import InteractionEvaluator
 
 try:
     from ..tools.db import log_nlq_interaction, execute_sql_on_postgis
@@ -73,6 +74,7 @@ class BasicNLQAgent(dspy.Module):
         self.llm = None  # Initialize to None
         self.generate_sql = None  # Initialize to None
         self.agent_version = agent_version
+        self.evaluator = None
 
         # --- Detailed Initialization Logging ---
         api_key_status = os.getenv("OPENAI_API_KEY")
@@ -108,6 +110,25 @@ class BasicNLQAgent(dspy.Module):
             print(
                 f"[BasicNLQAgent.__init__] Initialized self.generate_sql = dspy.Predict(NLQToSQL). Current self.generate_sql.lm: {getattr(self.generate_sql, 'lm', 'N/A')}"
             )
+
+            # --- Load optimized predictor state if available ---
+            optimized_predictor_path = "compiled_nlq_predictor.json" # Adjust path if needed
+            if os.path.exists(optimized_predictor_path):
+                try:
+                    print(f"[BasicNLQAgent.__init__] Found '{optimized_predictor_path}'. Attempting to load its state.")
+                    self.generate_sql.load(optimized_predictor_path)
+                    print(f"[BasicNLQAgent.__init__] Successfully loaded optimized state into self.generate_sql from '{optimized_predictor_path}'.")
+                    # After loading, the LM might need to be re-assigned if it wasn't saved or if using a different LM instance
+                    if not self.generate_sql.lm and self.llm:
+                        print("[BasicNLQAgent.__init__] LM was None after loading. Re-assigning self.llm.")
+                        self.generate_sql.lm = self.llm
+                    print(f"[BasicNLQAgent.__init__] self.generate_sql.lm after attempting load: {self.generate_sql.lm}")
+                except Exception as load_err:
+                    print(f"[BasicNLQAgent.__init__] ERROR: Failed to load optimized predictor state from '{optimized_predictor_path}': {load_err}")
+                    print("[BasicNLQAgent.__init__] Falling back to unoptimized predictor.")
+            else:
+                print(f"[BasicNLQAgent.__init__] '{optimized_predictor_path}' not found. Using unoptimized predictor.")
+            # --- End Load optimized predictor state ---
 
             # Manually set lm on generate_sql if it's None and self.llm is available
             if (
@@ -148,6 +169,22 @@ class BasicNLQAgent(dspy.Module):
             self.generate_sql = None  # Ensure generate_sql is None on failure
         # --- End Detailed Initialization Logging ---
 
+        # --- Initialize Interaction Evaluator ---
+        try:
+            print(f"[BasicNLQAgent.__init__] Attempting to initialize InteractionEvaluator...")
+            self.evaluator = InteractionEvaluator()
+            if not self.evaluator.evaluate_interaction:
+                print("[BasicNLQAgent.__init__] WARNING: InteractionEvaluator module failed to initialize properly.")
+                self.evaluator = None
+            else:
+                print("[BasicNLQAgent.__init__] InteractionEvaluator initialized successfully.")
+        except Exception as e:
+            print(f"[BasicNLQAgent.__init__] CRITICAL ERROR initializing InteractionEvaluator: {e}")
+            import traceback
+            print(traceback.format_exc())
+            self.evaluator = None
+        # --- End Interaction Evaluator Initialization ---
+
     def forward(
         self,
         natural_language_query: str,
@@ -167,6 +204,10 @@ class BasicNLQAgent(dspy.Module):
         total_tokens: Optional[int] = None
         cost_usd_cents: Optional[float] = None
         current_llm_model_used = self.llm.model if self.llm else "llm_not_configured"
+
+        # Initialize evaluator feedback variables
+        evaluator_score: Optional[int] = None
+        evaluator_critique: Optional[str] = None
 
         try:
             if not self.llm:
@@ -216,14 +257,14 @@ class BasicNLQAgent(dspy.Module):
 
             if schema_context is None or not schema_context.strip():
                 print(
-                    "Warning: No specific schema context provided to agent.forward(). Using fallback."
+                    "Warning: No specific schema context provided to agent.forward(). Using fallback to load all available schemas."
                 )
-                schema_context = effective_load_schemas(["nlq_agent_log"])
+                schema_context = effective_load_schemas([])
                 if (
                     not schema_context.strip()
                     or "No specific table schemas provided" in schema_context
                 ):
-                    schema_context = "No specific table schemas provided. Please infer table structure from the question."
+                    schema_context = "No table schemas could be loaded. Please ensure .sql files exist in the schemas directory."
 
             response = self.generate_sql(
                 nl_question=natural_language_query, context=schema_context
@@ -276,6 +317,47 @@ class BasicNLQAgent(dspy.Module):
                     processed_result_text = (
                         "Error during SQL execution or query returned no data."
                     )
+            
+            # --- Call Interaction Evaluator ---
+            if self.evaluator and self.evaluator.evaluator_llm and generated_sql and processed_result_text:
+                # Prepare a summary of the SQL result for the evaluator
+                sql_res_summary_for_eval = "No direct SQL result data provided to evaluator."
+                if sql_result_data is not None:
+                    sql_res_summary_for_eval = str(sql_result_data)
+                    if len(sql_res_summary_for_eval) > 1000:
+                        sql_res_summary_for_eval = sql_res_summary_for_eval[:1000] + "..."
+                
+                # Ensure schema_context for evaluator is the one used for SQL generation
+                schema_for_evaluator = schema_context
+                if not schema_for_evaluator:
+                    temp_effective_load_schemas = load_schemas
+                    if "load_schemas_fallback" in globals() and not callable(load_schemas):
+                        temp_effective_load_schemas = load_schemas_fallback
+                    schema_for_evaluator = temp_effective_load_schemas([])
+                    if not schema_for_evaluator.strip() or "No specific table schemas provided" in schema_for_evaluator:
+                         schema_for_evaluator = "No specific table schemas provided. Please infer table structure from the question."
+
+                print(f"[BasicNLQAgent.forward] Calling InteractionEvaluator with NLQ: '{natural_language_query[:50]}...'")
+                
+                # Use dspy.settings to temporarily set the LM for the evaluator call
+                # Store original lm to restore it, just in case, though context manager should handle it.
+                # original_global_lm = dspy.settings.lm 
+                with dspy.settings.context(lm=self.evaluator.evaluator_llm):
+                    print(f"[BasicNLQAgent.forward] DEBUG: Temporarily set dspy.settings.lm for evaluator: {dspy.settings.lm} (Model: {getattr(dspy.settings.lm, 'model', 'N/A')})")
+                    eval_response = self.evaluator.forward(
+                        natural_language_query=natural_language_query,
+                        schema_context=schema_for_evaluator, 
+                        generated_sql=generated_sql,
+                        sql_query_result_summary=sql_res_summary_for_eval,
+                        final_answer_to_user=processed_result_text
+                    )
+                # print(f"[BasicNLQAgent.forward] DEBUG: Restored dspy.settings.lm after evaluator call: {dspy.settings.lm} (Model: {getattr(dspy.settings.lm, 'model', 'N/A') if dspy.settings.lm else 'N/A'})")
+                
+                evaluator_score = eval_response.get("overall_success_score")
+                evaluator_critique = eval_response.get("critique_text")
+                print(f"[BasicNLQAgent.forward] Evaluator response: Score={evaluator_score}, Critique='{str(evaluator_critique)[:100]}...'")
+            # --- End Interaction Evaluator Call ---
+
         except Exception as e:
             error_message = str(e)
             print(f"Agent error: {error_message}")
@@ -311,6 +393,9 @@ class BasicNLQAgent(dspy.Module):
                     completion_tokens=completion_tokens,
                     total_tokens=total_tokens,
                     cost_usd_cents=cost_usd_cents,
+                    evaluator_overall_success_score=evaluator_score,
+                    evaluator_critique_text=evaluator_critique,
+                    schema_context_used=schema_context
                 )
                 if log_id:
                     print(f"NLQ Agent interaction logged with ID: {log_id}")

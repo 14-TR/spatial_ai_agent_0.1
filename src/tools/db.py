@@ -7,6 +7,7 @@ from psycopg.rows import dict_row
 from typing import List, Dict, Any, Optional
 import datetime
 import decimal
+import uuid
 
 # Helper function to make data JSON serializable
 def make_serializable(data: Any) -> Any:
@@ -153,10 +154,11 @@ def log_nlq_interaction(
         Dict[str, Any]
     ] = None,  # Assuming JSONB will be passed as dict
     evaluator_overall_success_score: Optional[int] = None,
-    evaluator_critique_text: Optional[str] = None
-) -> Optional[int]:
+    evaluator_critique_text: Optional[str] = None,
+    schema_context_used: Optional[str] = None  # New parameter
+) -> Optional[uuid.UUID]:
     """
-    Logs an interaction with the NLQ agent to the nlq_agent_log table.
+    Logs the details of an NLQ agent interaction to the database.
 
     Args:
         All arguments correspond to the columns in the nlq_agent_log table.
@@ -176,14 +178,14 @@ def log_nlq_interaction(
             llm_model_used, latency_ms, prompt_tokens, completion_tokens, 
             total_tokens, cost_usd_cents, human_feedback_score, 
             human_feedback_notes, is_correct, expected_sql_query, expected_result,
-            evaluator_overall_success_score, evaluator_critique_text
+            evaluator_overall_success_score, evaluator_critique_text, schema_context_used
         ) VALUES (
             %(natural_language_query)s, %(session_id)s, %(generated_sql_query)s,
             %(sql_execution_raw_result)s, %(processed_analysis_result)s, %(agent_version)s,
             %(llm_model_used)s, %(latency_ms)s, %(prompt_tokens)s, %(completion_tokens)s,
             %(total_tokens)s, %(cost_usd_cents)s, %(human_feedback_score)s,
             %(human_feedback_notes)s, %(is_correct)s, %(expected_sql_query)s, %(expected_result)s,
-            %(evaluator_overall_success_score)s, %(evaluator_critique_text)s
+            %(evaluator_overall_success_score)s, %(evaluator_critique_text)s, %(schema_context_used)s
         ) RETURNING log_id;
     """
 
@@ -215,6 +217,7 @@ def log_nlq_interaction(
         ),
         "evaluator_overall_success_score": evaluator_overall_success_score,
         "evaluator_critique_text": evaluator_critique_text,
+        "schema_context_used": schema_context_used  # New field to log
     }
 
     try:
@@ -280,7 +283,8 @@ if __name__ == "__main__":
         total_tokens=250,
         cost_usd_cents=0.025,
         evaluator_overall_success_score=100,
-        evaluator_critique_text="Excellent analysis!"
+        evaluator_critique_text="Excellent analysis!",
+        schema_context_used="Paris"
     )
     if log_id is not None:
         print(f"Successfully logged interaction with log_id: {log_id}")

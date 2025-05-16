@@ -1,0 +1,42 @@
+{
+  "traces": [],
+  "train": [],
+  "demos": [
+    {
+      "augmented": true,
+      "nl_question": "How many fire events are in the VIIRS table?",
+      "context": "-- Placeholder for test_viirs_fire_events table schema\n-- Please replace with your actual CREATE TABLE statement.\n\/*\nExample (based on generate_test_data.py):\nCREATE TABLE test_viirs_fire_events (\n    event_id SERIAL PRIMARY KEY,\n    geom GEOMETRY(Point, 4326) NOT NULL,\n    detection_timestamp TIMESTAMPTZ NOT NULL,\n    brightness_kelvin NUMERIC,\n    confidence_percentage NUMERIC,\n    satellite_source VARCHAR(50)\n);\n*\/",
+      "sql_query": "SELECT COUNT(*) FROM test_viirs_fire_events;"
+    },
+    {
+      "nl_question": "What is the average brightness of the 5 most recent fires?",
+      "context": "-- Placeholder for test_viirs_fire_events table schema\n-- Please replace with your actual CREATE TABLE statement.\n\/*\nExample (based on generate_test_data.py):\nCREATE TABLE test_viirs_fire_events (\n    event_id SERIAL PRIMARY KEY,\n    geom GEOMETRY(Point, 4326) NOT NULL,\n    detection_timestamp TIMESTAMPTZ NOT NULL,\n    brightness_kelvin NUMERIC,\n    confidence_percentage NUMERIC,\n    satellite_source VARCHAR(50)\n);\n*\/",
+      "sql_query": "WITH MostRecentFires AS (\n    SELECT brightness_kelvin\n    FROM test_viirs_fire_events\n    ORDER BY detection_timestamp DESC\n    LIMIT 5\n)\nSELECT AVG(brightness_kelvin)\nFROM MostRecentFires;"
+    }
+  ],
+  "signature": {
+    "instructions": "Your task is to translate a natural language question into a SQL query.\nContext: You are given database table schemas in the 'context' field.\nQuestion: The user's question is in the 'nl_question' field.\nOutput: You MUST output ONLY the SQL query in the 'sql_query' field.\nABSOLUTELY NO EXPLANATIONS, NO INTRODUCTORY TEXT, NO MARKDOWN, NO CODE FENCES (```sql).\nThe 'sql_query' field must contain nothing but the SQL statement itself.\nThe SQL query must be safe, read-only (SELECT or WITH statements only).\nThe SQL query will be run against a PostgreSQL database with PostGIS extension.\nUse only tables and columns defined in the provided schema context.\nIf information is missing from the schema, do not infer or invent columns\/tables.\nExample Output for 'sql_query': SELECT COUNT(*) FROM my_table WHERE condition = 'value';",
+    "fields": [
+      {
+        "prefix": "Context:",
+        "description": "Schema of relevant tables (e.g., CREATE TABLE statements)."
+      },
+      {
+        "prefix": "Nl Question:",
+        "description": "Natural language question."
+      },
+      {
+        "prefix": "Sql Query:",
+        "description": "ONLY the SQL query. NO additional text. NO markdown. Example: SELECT * FROM table;"
+      }
+    ]
+  },
+  "lm": null,
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.12",
+      "dspy": "2.6.23",
+      "cloudpickle": "3.0"
+    }
+  }
+}
