@@ -1,0 +1,11 @@
+# Core Application & AI
+streamlit
+dspy
+openai
+
+# Database
+psycopg[binary]
+
+# Utilities
+python-dotenv
+faker 

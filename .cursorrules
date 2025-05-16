@@ -1,0 +1,152 @@
+project:
+  name: spatial_ai_agent
+  description: >
+    Modular DSPy‑powered Spatial AI agent for disaster & conflict response.
+    Local first (Streamlit + PyDeck), cloud‑scalable (containerised micro‑services).
+
+project_philosophy:
+  - "Clarity over cleverness"
+  - "Performance is non‑negotiable"
+  - "Modularity and composability"
+  - "Explicitness and type safety"
+  - "Automated quality gates"
+
+languages:
+  python: "3.12"
+  sql:    "PostgreSQL‑15/PostGIS‑3.5"
+  yaml:   "*"
+
+directories:
+  src:          "backend source code"
+  src/agents:   "DSPy modules (QueryModule, ResultAnalysisModule, etc.)"
+  src/tools:    "DB adapters, caching, message‑bus utilities"
+  src/ui:       "Streamlit/PyDeck prototype; keep React POC under ui/react/"
+  data/:        "version‑controlled tiny samples; NO large/official datasets"
+  tests/:       "pytest unit & integration tests"
+  docs/:        "architecture, ADRs, risk register"
+
+code_style:
+  python:
+    import_rules:
+      style: "absolute unless standard library"
+    typing_tool: "mypy"
+    mypy_options: "--strict" # from JSON typing.strict_mypy
+    typing_policy: "all public interfaces fully typed" # from JSON typing.policy
+    generics_usage: "typing.TypeVar where beneficial" # from JSON typing.generics
+
+documentation_style:
+  python:
+    docstring_style: "Google"
+    required_for:
+      - "module"
+      - "class"
+      - "function"
+      - "public_method"
+    content_blocks:
+      - "Purpose"
+      - "Args"
+      - "Returns"
+      - "Raises"
+      - "Example"
+
+testing:
+  framework: pytest
+  coverage:  90
+  use_fixtures_policy: "stateless" # Added from JSON
+  fast_tests_glob: "tests/unit/**/test_*.py"
+  slow_marker:     "e2e"
+
+logging_standards:
+  library: "logging"
+  level_policy:
+    dev: "DEBUG"
+    prod: "INFO"
+  handlers:
+    - "StreamHandler"
+    - "RotatingFileHandler"
+  formatter: "%(asctime)s %(levelname)s %(name)s %(message)s"
+
+exception_handling_rules:
+  custom_base_exception: "AppError"
+  avoid_bare_except: true
+  wrap_external_calls: true
+
+configuration_management:
+  file: "config.json"
+  env_overrides: true
+  schema_validation: "pydantic"
+
+project_structure_conventions:
+  cli_script: "enw_assistant.py (Click or argparse)"
+  orchestrator_script: "enw_orchestrator.py"
+  utils_module_pattern: "enw_maintenance_utils.py and peers"
+  # tests_folder: "tests/ (pytest)" is covered by directories.tests and testing.framework
+
+performance_guidelines:
+  profilers:
+    - "cProfile"
+    - "line_profiler"
+  async_guidelines: "use asyncio for IO‑bound tasks"
+  vectorization_preference: "prefer numpy or pandas when applicable"
+
+security:
+  ban_secrets: true
+  allowed_env_prefixes: ["SPatialAI_", "POSTGRES_", "OPENAI_"]
+  db_role: readonly for all automated SQL execution
+  sql_allowlist_patterns:
+    - "^SELECT"
+    - "^WITH"
+    - "ST_"
+  input_validation_policy: "Mandatory for all external inputs" # Added from JSON
+
+learned_memory_protocol:
+  enabled: true
+  memory_file: "learned_memories.yaml"
+  access_method: "Before making decisions or using tools to find information, the agent MUST first consult the 'learned_memories.yaml' file. Search the 'lessons' list for entries with 'context_keywords' relevant to the current query or task."
+  application_guideline: "If a relevant lesson is found and provides a direct answer or clear guidance, the agent SHOULD apply this learned information to avoid redundant actions (e.g., tool calls for information already learned, or repeating past mistakes)."
+  update_procedure: "If new information is learned during a session that would be beneficial for future interactions (e.g., a user preference, a common pitfall, a successful strategy for a specific problem), the agent SHOULD suggest adding a new lesson to 'learned_memories.yaml'. The suggestion should include a proposed 'id', 'topic', 'description', and relevant 'context_keywords'. The user will be responsible for actually editing and saving the YAML file."
+  conflict_resolution: "If a learned memory conflicts with direct user instructions in the current session, direct user instructions take precedence. The agent may note the conflict and suggest updating the learned memory if appropriate."
+
+code_review_process:
+  mode: "BrutalCodeReview" # From JSON review_prompt
+  required_sections_in_review:
+    - "Critical summary"
+    - "Function flow map"
+    - "Issue detection with remediation"
+    - "Usage guide"
+
+llm_rules:
+  provider: "openai"
+  model:    "gpt‑4o‑mini"
+  max_tokens: 2048
+  cost_guard:
+    usd_cents_per_request: 2
+    usd_monthly_cap:       100
+  retry_policy:
+    max_attempts: 3
+    backoff_seconds: [1, 3, 7]
+
+agent_evaluation:
+  harness_script: "tests/eval/run_eval.py"
+  benchmarks:
+    - nlq_to_sql_accuracy
+    - latency
+    - token_cost
+  threshold:
+    nlq_to_sql_accuracy: 0.85
+  block_merge_on_failure: true
+
+tasks:
+  - id: run_agent
+    description: "Launch Streamlit prototype (hot‑reload)"
+    cmd: "streamlit run src/ui/app.py"
+
+dont_edit:
+  - data/**/*.*
+  - "*.md"          # architecture docs edited outside Cursor
+
+goals:
+  - "Keep DSPy modules pure & stateless; external calls via dspy.Tool wrappers"
+  - "All SQL executed through execute_sql_on_postgis() in src/tools/db.py"
+  - "Maintain schema source‑of‑truth in docs/schema.md and sync helper script"
+  - "Every PR must include at least one test touching changed code" 

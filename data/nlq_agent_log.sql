@@ -1,0 +1,21 @@
+nlq_agent_log (
+    log_id SERIAL PRIMARY KEY,
+    timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    session_id TEXT,
+    natural_language_query TEXT NOT NULL,
+    generated_sql_query TEXT,
+    sql_execution_raw_result JSONB,
+    processed_analysis_result TEXT,
+    agent_version TEXT,
+    llm_model_used TEXT,
+    latency_ms INTEGER,
+    prompt_tokens INTEGER,
+    completion_tokens INTEGER,
+    total_tokens INTEGER,
+    cost_usd_cents NUMERIC,
+    human_feedback_score INTEGER,
+    human_feedback_notes TEXT,
+    is_correct BOOLEAN,
+    expected_sql_query TEXT,
+    expected_result JSONB
+); 

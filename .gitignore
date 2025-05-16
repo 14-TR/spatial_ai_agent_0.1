@@ -1,0 +1,31 @@
+# Environment variables file
+.env
+
+# Poetry virtualenv
+.venv/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Mypy cache
+.mypy_cache/
+
+# Ruff cache
+.ruff_cache/
+
+# Pytest cache
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# VS Code settings (optional, user-specific)
+.vscode/
+
+# Operating System files
+.DS_Store
+Thumbs.db 

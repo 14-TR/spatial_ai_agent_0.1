@@ -1,0 +1,23 @@
+# Learned Memories
+# This file stores lessons learned by the AI agent to improve its performance
+# and reduce redundant operations or tool calls.
+# Each lesson should have a clear description and optionally, a context or trigger.
+
+lessons:
+  - id: lesson_001
+    topic: "Example Lesson"
+    description: "This is an example of a learned lesson. When encountering X situation, remember to do Y."
+    context_keywords: ["example", "demonstration", "initial setup"]
+    # Optional fields you might consider adding later:
+    # date_learned: "YYYY-MM-DD"
+    # source: "User feedback during session ID XYZ"
+    # related_tools_or_actions: ["tool_name", "specific_command_pattern"]
+    # confidence_score: 0.9 # 0.0 to 1.0 
+  - id: lesson_002
+    topic: "Streamlit Application Execution"
+    description: "Standard command to run the Streamlit application from the project root directory."
+    context_keywords: ["streamlit", "run app", "launch ui", "start application", "execute streamlit"]
+    details:
+      command: "streamlit run src/ui/app.py"
+      working_directory: "Project Root"
+      notes: "Ensure all dependencies from requirements.txt are installed and .env file is configured if needed." 
