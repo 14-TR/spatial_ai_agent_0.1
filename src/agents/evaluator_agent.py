@@ -20,7 +20,7 @@ class EvaluateNLQInteraction(dspy.Signature):
     # Optional: suggested_correction_sql = dspy.OutputField(desc="If the SQL was flawed, a corrected version. Otherwise, N/A.")
 
 class InteractionEvaluator(dspy.Module):
-    def __init__(self, evaluation_model_name: str = "gpt-3.5-turbo", max_tokens: int = 500):
+    def __init__(self, evaluation_model_name: str = "gpt-4o-mini", max_tokens: int = 1024):
         super().__init__()
         self.evaluator_llm_name = evaluation_model_name # Should be just "gpt-3.5-turbo" if using openai prefix in dspy.LM
         self.evaluator_llm = None
@@ -104,8 +104,9 @@ if __name__ == '__main__':
         try:
             # Use a specific model for evaluation here for the global setting
             # This will be the LM that evaluate_interaction picks up if its own .lm isn't overriding.
-            print(f"[__main__] Attempting to configure global dspy.settings.lm with openai/gpt-3.5-turbo")
-            test_eval_llm = dspy.LM("openai/gpt-3.5-turbo", max_tokens=500) # Matching default in InteractionEvaluator for consistency
+            print(f"[__main__] Attempting to configure global dspy.settings.lm with openai/gpt-4o-mini")
+            # Matching the new default in InteractionEvaluator for consistency in test
+            test_eval_llm = dspy.LM("openai/gpt-4o-mini", max_tokens=1024) 
             dspy.configure(lm=test_eval_llm)
             print(f"[__main__] Configured dspy.settings.lm globally for test: {dspy.settings.lm} (Model: {getattr(dspy.settings.lm, 'model', 'N/A')})")
         except Exception as e:

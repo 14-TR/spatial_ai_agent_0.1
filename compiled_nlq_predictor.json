@@ -4,14 +4,27 @@
   "demos": [
     {
       "augmented": true,
-      "nl_question": "How many fire events are in the VIIRS table?",
-      "context": "-- Placeholder for test_viirs_fire_events table schema\n-- Please replace with your actual CREATE TABLE statement.\n\/*\nExample (based on generate_test_data.py):\nCREATE TABLE test_viirs_fire_events (\n    event_id SERIAL PRIMARY KEY,\n    geom GEOMETRY(Point, 4326) NOT NULL,\n    detection_timestamp TIMESTAMPTZ NOT NULL,\n    brightness_kelvin NUMERIC,\n    confidence_percentage NUMERIC,\n    satellite_source VARCHAR(50)\n);\n*\/",
-      "sql_query": "SELECT COUNT(*) FROM test_viirs_fire_events;"
+      "nl_question": "How many interactions have been logged in total by the NLQ agent in nlq_agent_log?",
+      "context": "-- Placeholder for nlq_agent_log table schema\n-- Please replace with your actual CREATE TABLE statement.\n\/*\nExample:\nCREATE TABLE nlq_agent_log (\n    log_id SERIAL PRIMARY KEY,\n    timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,\n    natural_language_query TEXT,\n    generated_sql_query TEXT,\n    -- ... other columns ...\n);\n*\/",
+      "sql_query": "SELECT COUNT(*) FROM nlq_agent_log;"
     },
     {
-      "nl_question": "What is the average brightness of the 5 most recent fires?",
+      "augmented": true,
+      "nl_question": "List the date, type of event, and place for 2 recent conflicts from test_acled_conflict_events.",
+      "context": "-- Placeholder for test_acled_conflict_events table schema\n-- Please replace with your actual CREATE TABLE statement.\n\/*\nExample (based on generate_test_data.py):\nCREATE TABLE test_acled_conflict_events (\n    event_id VARCHAR(50) PRIMARY KEY,\n    event_date DATE NOT NULL,\n    geom GEOMETRY(Point, 4326) NOT NULL,\n    admin1_name VARCHAR(100),\n    admin2_name VARCHAR(100),\n    location_name VARCHAR(255),\n    event_type VARCHAR(100) NOT NULL,\n    sub_event_type VARCHAR(100),\n    actor1 VARCHAR(255),\n    actor2 VARCHAR(255),\n    fatalities INTEGER,\n    notes TEXT,\n    source VARCHAR(255)\n);\n*\/",
+      "sql_query": "SELECT event_date, event_type, location_name\nFROM test_acled_conflict_events\nORDER BY event_date DESC\nLIMIT 2;"
+    },
+    {
+      "augmented": true,
+      "nl_question": "Tell me when and how hot the top 3 brightest fires were from test_viirs_fire_events.",
       "context": "-- Placeholder for test_viirs_fire_events table schema\n-- Please replace with your actual CREATE TABLE statement.\n\/*\nExample (based on generate_test_data.py):\nCREATE TABLE test_viirs_fire_events (\n    event_id SERIAL PRIMARY KEY,\n    geom GEOMETRY(Point, 4326) NOT NULL,\n    detection_timestamp TIMESTAMPTZ NOT NULL,\n    brightness_kelvin NUMERIC,\n    confidence_percentage NUMERIC,\n    satellite_source VARCHAR(50)\n);\n*\/",
-      "sql_query": "WITH MostRecentFires AS (\n    SELECT brightness_kelvin\n    FROM test_viirs_fire_events\n    ORDER BY detection_timestamp DESC\n    LIMIT 5\n)\nSELECT AVG(brightness_kelvin)\nFROM MostRecentFires;"
+      "sql_query": "SELECT detection_timestamp, brightness_kelvin\nFROM test_viirs_fire_events\nORDER BY brightness_kelvin DESC\nLIMIT 3;"
+    },
+    {
+      "augmented": true,
+      "nl_question": "How many fires did the 'Suomi NPP' satellite detect in test_viirs_fire_events?",
+      "context": "-- Placeholder for test_viirs_fire_events table schema\n-- Please replace with your actual CREATE TABLE statement.\n\/*\nExample (based on generate_test_data.py):\nCREATE TABLE test_viirs_fire_events (\n    event_id SERIAL PRIMARY KEY,\n    geom GEOMETRY(Point, 4326) NOT NULL,\n    detection_timestamp TIMESTAMPTZ NOT NULL,\n    brightness_kelvin NUMERIC,\n    confidence_percentage NUMERIC,\n    satellite_source VARCHAR(50)\n);\n*\/",
+      "sql_query": "SELECT COUNT(*) FROM test_viirs_fire_events WHERE satellite_source = 'Suomi NPP';"
     }
   ],
   "signature": {
