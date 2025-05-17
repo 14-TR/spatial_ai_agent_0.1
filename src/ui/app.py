@@ -14,25 +14,25 @@ if PROJECT_ROOT not in sys.path:
 
 # --- Global DSPy Configuration (run once at app startup) ---
 try:
-    print("Attempting to configure global DSPy settings (once)...")
     # Minimal global configuration. Agents will create and use their own LM instances explicitly.
     dspy.settings.configure(
         model="gpt-4o-mini",  # A default model, though agents specify theirs
         max_tokens=1024,  # Default max_tokens for the dspy.settings context
     )
-    print("SUCCESS: Global DSPy settings configured with default model name.")
 except Exception as e:
     if (
         "already configured" in str(e).lower()
         or "can only be changed by the thread" in str(e).lower()
     ):
-        print(
-            f"INFO: Global DSPy settings likely already configured on a previous run/thread: {e}"
-        )
+        pass # Already configured, no action needed
     else:
         critical_error_msg = (
             f"CRITICAL ERROR: Failed to configure global DSPy LM settings: {e}"
         )
+        # In a UI context, st.error is better than print for critical issues at startup
+        # However, if st is not available here (e.g. if this runs before Streamlit UI elements can be drawn)
+        # then print is a fallback. For bare-bones, we might remove this or make it conditional.
+        # For now, let's assume st might not be ready for a critical DSPy init failure.
         print(critical_error_msg)
 # --- End Global DSPy Configuration ---
 
@@ -80,31 +80,31 @@ def get_nlq_agent_cached():
 
 
 # --- Load Schemas and Generate Sample Questions (Cached) ---
-@st.cache_data  # Cache the generated questions to avoid re-generating on every interaction
-def load_and_generate_sample_questions(table_list: List[str], num_samples: int = 3):
-    """Loads schemas and generates a few sample questions."""
-    qgen_agent = get_qgen_agent_cached()
-    if not qgen_agent:
-        return [], "Error: Question generation agent not available."
-
-    schema_context = load_schemas(table_list)
-    if (
-        "Error loading schema" in schema_context
-        or "Schema file not found" in schema_context
-        or not schema_context.strip()
-    ):
-        return (
-            [],
-            f"Warning: Could not load all schemas for question generation. Context: {schema_context[:200]}",
-        )
-
-    try:
-        sample_questions = qgen_agent.forward(
-            schema_context=schema_context, num_questions=num_samples
-        )
-        return sample_questions, None  # Return None for error message if successful
-    except Exception as e:
-        return [], f"Error generating sample questions: {e}"
+# @st.cache_data  # Cache the generated questions to avoid re-generating on every interaction
+# def load_and_generate_sample_questions(table_list: List[str], num_samples: int = 3):
+#     """Loads schemas and generates a few sample questions."""
+#     qgen_agent = get_qgen_agent_cached() # This function is not defined
+#     if not qgen_agent:
+#         return [], "Error: Question generation agent not available."
+# 
+#     schema_context = load_schemas(table_list)
+#     if (
+#         "Error loading schema" in schema_context
+#         or "Schema file not found" in schema_context
+#         or not schema_context.strip()
+#     ):
+#         return (
+#             [],
+#             f"Warning: Could not load all schemas for question generation. Context: {schema_context[:200]}",
+#         )
+# 
+#     try:
+#         sample_questions = qgen_agent.forward(
+#             schema_context=schema_context, num_questions=num_samples
+#         )
+#         return sample_questions, None  # Return None for error message if successful
+#     except Exception as e:
+#         return [], f"Error generating sample questions: {e}"
 
 
 # --- Main UI ---
